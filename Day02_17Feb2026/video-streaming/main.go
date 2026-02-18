@@ -37,15 +37,11 @@ func (b Buffer) Play() {
 	fmt.Println("Video completed!")
 }
 
-func (b Buffer) PlayWithoutSort() {
-	fmt.Println("Playing video...")
-
-}
-
 type Window struct {
 	size   int
 	window []VideoPacket
 	start  int
+	mu     sync.Mutex
 }
 
 func (w *Window) InitializeWindow() {
@@ -53,27 +49,67 @@ func (w *Window) InitializeWindow() {
 }
 
 func (w *Window) AddPacket(packet VideoPacket) {
-	fmt.Println("Sending packet number:", packet.SequenceNumber)
-	if packet.SequenceNumber <= w.start+w.size {
-		index := (packet.SequenceNumber - 1) % w.size
-		w.window[index] = packet
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	fmt.Println("Packet", packet.SequenceNumber, "received!")
+
+	// if the packet is in rder -> play immediately
+	if packet.SequenceNumber == w.start {
+		w.PlayPacket(packet)
+		w.start++
+
+		// updates the window after playing the current packet and also checks for the next packets in case they arrived early
+		w.UpdateWindow()
+		return
 	}
+
+	// if the packet is inside the window but not in order -> add into the buffer
+	if packet.SequenceNumber > w.start && packet.SequenceNumber <= w.start+w.size {
+		index := packet.SequenceNumber % w.size
+		w.window[index] = packet
+
+		fmt.Println("Packet", packet.SequenceNumber, "buffered!")
+		return
+	}
+
+	// if the packet is outside the window -> drop it
+	fmt.Println("Packet", packet.SequenceNumber, "dropped!")
 }
 
-func (w Window) Play() {
-	fmt.Println("Playing video...")
-	i := w.start
-	numPacket := w.start
-	start := w.start
-	for numPacket < start+w.size {
-		packet := w.window[i%w.size]
-		fmt.Println("Playing packet number", packet.SequenceNumber, "with duration", packet.Duration, "seconds!")
-		time.Sleep(time.Duration(packet.Duration) * time.Second)
-		i = (i + 1) % w.size
-		numPacket++
-		// w.start = (w.start + 1) % w.size
+func (w *Window) PlayPacket(packet VideoPacket) {
+	// fmt.Println("Playing video...")
+	// i := w.start
+	// numPacket := w.start
+	// start := w.start
+	// for numPacket < start+w.size {
+	// 	packet := w.window[i%w.size]
+	// 	fmt.Println("Playing packet number", packet.SequenceNumber, "with duration", packet.Duration, "seconds!")
+	// 	time.Sleep(time.Duration(packet.Duration) * time.Second)
+	// 	i = (i + 1) % w.size
+	// 	numPacket++
+	// 	// w.start = (w.start + 1) % w.size
+	// }
+	// fmt.Println("Video completed!")
+
+	fmt.Println("Playing packet", packet.SequenceNumber, "with duration", packet.Duration, "seconds!")
+	time.Sleep(time.Duration(packet.Duration) * time.Second)
+	fmt.Println("Packet", packet.SequenceNumber, "played!")
+}
+
+func (w *Window) UpdateWindow() {
+	for {
+		index := w.start % w.size
+		packet := w.window[index]
+
+		if packet.SequenceNumber != w.start {
+			return
+		}
+
+		w.PlayPacket(packet)
+		w.window[index] = VideoPacket{} // clear the packet from the window after playing
+		w.start++
 	}
-	fmt.Println("Video completed!")
 }
 
 func main() {
@@ -95,23 +131,22 @@ func main() {
 	buffer.Play()
 
 	// method 2: using a window
-	window := Window{size: 5, start: 2}
+	window := Window{size: 5, start: 1}
 	window.InitializeWindow()
 	var wg2 sync.WaitGroup
 
-	for i := 3; i <= 8; i++ {
+	for i := 1; i <= 10; i++ {
 		newPacket := VideoPacket{
 			Data:           "Video packet" + strconv.Itoa(i) + "!",
 			SequenceNumber: i,
 			Duration:       randomTimeGenerator(),
 		}
 		wg2.Go(func() {
+			fmt.Println("Sending packet:", newPacket.SequenceNumber)
 			window.AddPacket(newPacket)
 		})
 	}
 	wg2.Wait()
-	window.Play()
-
 }
 
 func randomTimeGenerator() int {
