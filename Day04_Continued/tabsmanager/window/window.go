@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"tabsmanager/tabs"
 	"tabsmanager/trie"
+	"tabsmanager/trienode"
 )
 
 type Window struct {
@@ -39,6 +40,7 @@ func (w *Window) CloseTab(name string) {
 	}
 
 	if w.head.Name == name {
+		w.Trie.Erase(name)
 		w.head = w.head.Next
 		if w.head != nil {
 			w.head.Prev = nil
@@ -50,6 +52,7 @@ func (w *Window) CloseTab(name string) {
 	for current != nil {
 		if current.Name == name {
 			// if current.Prev != nil { // only head can have prev as nil - already checked above
+			w.Trie.Erase(name)
 			current.Prev.Next = current.Next
 			// }
 			if current.Next != nil {
@@ -71,6 +74,12 @@ func (w *Window) CloseAllTabsToRight(name string) {
 	current := w.head
 	for current != nil {
 		if current.Name == name {
+			node := current.Next
+			for node != nil {
+				w.Trie.Erase(node.Name)
+				node = node.Next
+			}
+
 			if current.Next != nil {
 				current.Next.Prev = nil
 			}
@@ -82,6 +91,9 @@ func (w *Window) CloseAllTabsToRight(name string) {
 }
 
 func (w *Window) CloseAllTabs() {
+	w.Trie.Root.Children = map[rune]*trienode.TrieNode{}
+	w.Trie.Root.EndWith = 0
+	w.Trie.Root.CountPreffix = 0
 	w.head = nil
 }
 
