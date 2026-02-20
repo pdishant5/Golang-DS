@@ -36,7 +36,7 @@ func (s *Stack[T]) Pop() error {
 
 	s.top--
 	s.size--
-	if s.size == 0 {
+	if s.Empty() {
 		s.top = -1
 	}
 	return nil
