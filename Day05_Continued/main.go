@@ -3,6 +3,7 @@ package main
 import (
 	"data-structure/queuelinkedlist"
 	"data-structure/queueslice"
+	"data-structure/stackslice"
 	"fmt"
 )
 
@@ -100,4 +101,55 @@ func main() {
 		fmt.Println("Error:", err) // error
 	}
 	fmt.Println("Front element:", val) // 0
+
+	// fixed-size stack
+	s1 := stackslice.New[int](5)
+
+	err = s1.Push(1)
+	err = s1.Push(2)
+	err = s1.Push(3)
+	err = s1.Push(4)
+	err = s1.Push(5)
+	// no error till this point
+	fmt.Println("Error:", err) // nil
+
+	// accessing the top element
+	val, err = s1.Top()
+	if err != nil {
+		fmt.Println("Error:", err) // nil
+	}
+	fmt.Println("Top element:", val) // 5
+
+	// error - stack is full
+	err = s1.Push(6)
+	fmt.Println("Error:", err) // error
+
+	err = s1.Pop()
+	err = s1.Pop()
+	// we can now push, because stack is not full
+	err = s1.Push(6)
+	fmt.Println("Error:", err) // nil
+
+	val, err = s1.Top()
+	if err != nil {
+		fmt.Println("Error:", err) // nil
+	}
+	fmt.Println("Top element:", val) // 6
+
+	err = s1.Pop()
+	err = s1.Pop()
+	err = s1.Pop()
+	err = s1.Pop()
+	// no error till this point - there is at least one value to pop
+	fmt.Println("Error:", err) // nil
+
+	// error - queue is empty
+	err = s1.Pop()
+	fmt.Println("Error:", err) // error
+
+	val, err = s1.Top()
+	if err != nil {
+		fmt.Println("Error:", err) // error
+	}
+	fmt.Println("Top element:", val) // 0
 }
